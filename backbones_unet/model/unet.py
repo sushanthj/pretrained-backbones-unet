@@ -5,7 +5,6 @@ import torch.nn.functional as F
 from typing import Optional, List
 from backbones_unet import __available_models__
 
-
 class Unet(nn.Module):
     """
     This class utilizes a pre-trained model as a backbone network and 
@@ -90,8 +89,8 @@ class Unet(nn.Module):
             backbone_indices=None,
             decoder_use_batchnorm=True,
             decoder_channels=(256, 128, 64, 32, 16),
-            in_channels=1,
-            num_classes=5,
+            in_channels=3,
+            num_classes=1,
             center=False,
             norm_layer=nn.BatchNorm2d,
             activation=nn.ReLU

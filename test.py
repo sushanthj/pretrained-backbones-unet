@@ -7,7 +7,8 @@ from backbones_unet.utils.trainer import Trainer
 
 # set_seed()
 
-random_tensor = torch.rand((1, 3, 64, 64))
+# random_tensor = torch.rand((1, 3, 1032, 1384))
+random_tensor = torch.rand((1, 3, 1024, 1024))
 
 model = Unet(in_channels=3, num_classes=1)
 

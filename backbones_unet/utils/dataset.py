@@ -7,16 +7,17 @@ from PIL import Image
 
 
 class SemanticSegmentationDataset(Dataset):
-    def __init__(self, 
-                 img_paths, 
+    def __init__(self,
+                 img_paths,
                  mask_paths=None,
                  size=(256, 256),
                  mode='binary',
-                 normalize=None):
+                 normalize=None,
+                 transformations=None):
         """
         Example semantic segmentation Dataset class.
         Run once when instantiating the Dataset object.
-        If you want to use it for binary semantic segmentation, 
+        If you want to use it for binary semantic segmentation,
         please select the mode as 'binary'. For multi-class, enter 'multi'.
         example_data/
             └── /images/
@@ -32,15 +33,15 @@ class SemanticSegmentationDataset(Dataset):
         img_paths : str
             The file path indicating the main directory that contains only images.
         mask_paths : str, default=None
-            The file path indicating the main directory that contains only 
+            The file path indicating the main directory that contains only
             ground truth images.
         size : tuple, default=(256, 256)
             Enter the (width, height) values into a tuple for resizing the data.
         mode : str, default='binary'
-            Choose how the DataSet object should generate data. 
+            Choose how the DataSet object should generate data.
             Enter 'binary' for binary masks.
         normalize : orchvision.transforms.Normalize, default=None
-            Normalize a tensor image with mean and standard deviation. 
+            Normalize a tensor image with mean and standard deviation.
             This transform does not support PIL Image.
         """
         self.img_paths = self._get_file_dir(img_paths)
@@ -48,56 +49,69 @@ class SemanticSegmentationDataset(Dataset):
         self.size = size
         self.mode = mode
         self.normalize = normalize
-        
+        self.transformations = transformations
+
     def __len__(self):
         """
         Returns the number of samples in our dataset.
         Returns
-        -------    
-        num_datas : int    
+        -------
+        num_datas : int
             Number of datas.
         """
         return len(self.img_paths)
-    
+
     def __getitem__(self, index):
         """
-        Loads and returns a sample from the dataset at 
-        the given index idx. Based on the index, it 
-        identifies the image’s location on disk, 
-        converts that to a tensor using read_image, 
-        retrieves the corresponding label from the 
-        ground truth data in self.mask_paths, calls the transform 
-        functions on them (if applicable), and returns 
+        Loads and returns a sample from the dataset at
+        the given index idx. Based on the index, it
+        identifies the image’s location on disk,
+        converts that to a tensor using read_image,
+        retrieves the corresponding label from the
+        ground truth data in self.mask_paths, calls the transform
+        functions on them (if applicable), and returns
         the tensor image and corresponding label in a tuple.
         Returns
-        -------   
+        -------
         img, mask : torch.Tensor
-            The transformed image and its corresponding 
-            mask image. If the mask path is None, it 
+            The transformed image and its corresponding
+            mask image. If the mask path is None, it
             will only return the transformed image.
             output_shape_mask: (batch_size, 1, img_size, img_size)
             output_shape_img: (batch_size, 3, img_size, img_size)
         """
         img_path = self.img_paths[index]
-        img = Image.open(img_path).convert("RGB")
-        img = img.resize((self.size[0], self.size[1])) 
-        img = torch.Tensor(np.array(img, dtype=np.uint8).transpose((2, 0, 1)))
+        img = Image.open(img_path).convert("RGB") # will be HWC
+        # NOTE: self.size should be W'H'
+        img = img.resize((self.size[0], self.size[1])) # should resize to H'W'C
+        img = torch.as_tensor(np.array(img, dtype=np.float16).transpose((2, 0, 1))) # transpose to convert from H'W'C -> CH'W'
+        print("final image is ", img.shape)
+
+        # apply transformations on images
+        img = self.transformations(img) if (self.transformations is not None) else img
+
+        # apply transformations on images
+        img = self.normalize(img) if self.normalize is not None else img
+
+        # process mask for train and val sets
         if self.mask_paths is not None:
             mask_path = self.mask_paths[index]
-            mask = Image.open(mask_path)
-            mask = mask.resize((self.size[0], self.size[1])) 
-            mask = np.array(mask)
-            
+            mask = Image.open(mask_path) # shape = HW
+            mask = mask.resize((self.size[0], self.size[1]))
+            print("mask shape is ", np.array(mask).shape)
+            mask = np.array(mask, dtype=np.uint8) # shape = H'W'
+            print("mask shape after conversion is ", mask.shape)
+
             if self.mode == 'binary':
                 mask = self._binary_mask(mask)
-            else: 
+                print("mask shape after thresholding is ", mask.shape)
+            else:
                 mask = self._multi_class_mask(mask)
 
             mask = torch.as_tensor(mask, dtype=torch.uint8)
-            if self.normalize: img = self.normalize(img)
+            print("final mask shape is ", mask.shape)
             return img, mask
         else:
-            if self.normalize: img = self.normalize(img)
             return img
 
     def _multi_class_mask(self, mask):
@@ -106,9 +120,9 @@ class SemanticSegmentationDataset(Dataset):
         return masks
 
     def _binary_mask(self, mask):
-        mask[:, :][mask[:, :] >= 1] = 1
-        mask[:, :][mask[:, :] < 1] = 0
-        mask = np.expand_dims(mask, axis=0)
+        mask[:, :][mask[:, :] >= 1] = 1 # threshold
+        mask[:, :][mask[:, :] < 1] = 0 # threshold
+        mask = np.expand_dims(mask, axis=0) # convert to (1,H,W) as 1 channel
         return mask
 
     def _get_file_dir(self, directory):
@@ -125,11 +139,11 @@ class SemanticSegmentationDataset(Dataset):
         """
         def atoi(text):
             return int(text) if text.isdigit() else text
-            
+
         def natural_keys(text):
             return [atoi(c) for c in re.split('(\d+)',text)]
 
-        for roots,dirs,files in os.walk(directory):               
+        for roots,dirs,files in os.walk(directory):
             if files:
                 directories = [roots + os.sep + file for file in  files]
                 directories.sort(key=natural_keys)
