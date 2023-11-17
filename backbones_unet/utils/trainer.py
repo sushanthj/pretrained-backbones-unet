@@ -120,8 +120,7 @@ class Trainer:
                 # forward pass
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     preds = self.model(images)
-                    # loss = self.criterion(preds.float(), labels.float())
-                    loss = self.criterion(preds, labels)
+                    loss = self.criterion(preds.float(), labels.float())
                 if not math.isfinite(loss):
                     msg = f"Loss is {loss}, stopping training!"
                     warnings.warn(msg)

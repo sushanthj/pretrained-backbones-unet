@@ -82,10 +82,18 @@ class SemanticSegmentationDataset(Dataset):
         """
         img_path = self.img_paths[index]
         img = Image.open(img_path).convert("RGB") # will be HWC
-        # NOTE: self.size should be W'H'
-        img = img.resize((self.size[0], self.size[1])) # should resize to H'W'C
-        img = torch.as_tensor(np.array(img, dtype=np.float16).transpose((2, 0, 1))) # transpose to convert from H'W'C -> CH'W'
-        print("final image is ", img.shape)
+        #                         NOTE: self.size should be W'H'
+
+        # img = img.resize((self.size[0], self.size[1])) # should resize to H'W'C
+
+        ################## Temporary Fix ############################
+        numpy_img = np.array(img, dtype=np.uint8).transpose((2, 0, 1)) # reshaped to CHW
+        # Manually cropping only the left part of the image and the top of the image
+        # img.shape = CHW
+        img = numpy_img[:, 8:, 240:-120]
+        ##############################################################
+
+        img = torch.Tensor(img) # transpose to convert from H'W'C -> CH'W'
 
         # apply transformations on images
         img = self.transformations(img) if (self.transformations is not None) else img
@@ -97,19 +105,22 @@ class SemanticSegmentationDataset(Dataset):
         if self.mask_paths is not None:
             mask_path = self.mask_paths[index]
             mask = Image.open(mask_path) # shape = HW
-            mask = mask.resize((self.size[0], self.size[1]))
-            print("mask shape is ", np.array(mask).shape)
+
+            # mask = mask.resize((self.size[0], self.size[1]))
             mask = np.array(mask, dtype=np.uint8) # shape = H'W'
-            print("mask shape after conversion is ", mask.shape)
+
+            ################## Temporary Fix ############################
+            # Manually cropping only the left part of the image and the top of the image
+            # img.shape = CHW
+            mask = mask[8:, 240:-120]
+            ##############################################################
 
             if self.mode == 'binary':
                 mask = self._binary_mask(mask)
-                print("mask shape after thresholding is ", mask.shape)
             else:
                 mask = self._multi_class_mask(mask)
 
             mask = torch.as_tensor(mask, dtype=torch.uint8)
-            print("final mask shape is ", mask.shape)
             return img, mask
         else:
             return img
