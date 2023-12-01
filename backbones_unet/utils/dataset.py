@@ -93,10 +93,10 @@ class SemanticSegmentationDataset(Dataset):
         img = numpy_img[:, 8:, 240:-120]
         ##############################################################
 
-        img = torch.Tensor(img) # transpose to convert from H'W'C -> CH'W'
-
         # apply transformations on images
         img = self.transformations(img) if (self.transformations is not None) else img
+
+        img = torch.Tensor(img) # transpose to convert from H'W'C -> CH'W'
 
         # apply transformations on images
         img = self.normalize(img) if self.normalize is not None else img

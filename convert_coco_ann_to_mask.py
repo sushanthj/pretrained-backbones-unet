@@ -61,10 +61,10 @@ def convert_coco_to_mask(input_json, image_folder, output_folder):
 
 if __name__ == "__main__":
     # Specify the path to COCO annotations and image folder
-    coco_annotation_json = "/home/sush/klab2/rosbags_collated/sensors_2023-08-03-15-19-03_0/annotations.json"
-    image_folder_path = "/home/sush/klab2/rosbags_collated/sensors_2023-08-03-15-19-03_0"
+    coco_annotation_json = "/home/sush/klab2/rosbags_collated/round_1/annotations.json"
+    image_folder_path = "/home/sush/klab2/rosbags_collated/round_1/"
 
     # Specify the output folder for mask images
-    output_mask_folder = "/home/sush/klab2/rosbags_collated/sensors_2023-08-03-15-19-03_0/masks"
+    output_mask_folder = "/home/sush/klab2/rosbags_collated/round_1/masks"
 
     convert_coco_to_mask(coco_annotation_json, image_folder_path, output_mask_folder)
