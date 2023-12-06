@@ -8,26 +8,58 @@ from PIL import Image, ImageDraw
 import ipdb
 import sys
 
+IMAGE_CENTER_X = 640
+
 def flatten_segmentation(segmentation):
     # Flatten the segmentation list
     return [coord for polygon in segmentation for coord in polygon]
 
-def get_middle_four(lst):
-    middle_index = len(lst) // 2
+def get_middle_four(mid_point_list, index_list):
+    """
+    Args:
+             mid_point_list : sorted list of mid points of the polygons
+                 index_list : indexes of original list of polygons after sorting
 
-    # If the list has an odd number of elements
-    # adjust the middle index to lean left
-    if len(lst) % 2 == 1:
-        middle_index -= 1
+    Returns:
+        filtered_index_list : the final lane indexes to be selected
+    """
+    # filter the images based on whether the mid point is to left or right of image center
+    # and filter the index list as well
+    left_half_mid_points = []
+    right_half_mid_points = []
+    left_half_indexes = []
+    right_half_indexes = []
 
-    # Get the middle 4 elements
-    middle_four = []
-    for i in range(middle_index - 1, middle_index + 3):
-        middle_four.append(i)
+    for i in range(len(mid_point_list)):
+        if mid_point_list[i] < IMAGE_CENTER_X:
+            left_half_mid_points.append(mid_point_list[i])
+            left_half_indexes.append(index_list[i])
 
-    assert len(middle_four) == 4
+    for i in range(len(mid_point_list)):
+        if mid_point_list[i] > IMAGE_CENTER_X:
+            right_half_mid_points.append(mid_point_list[i])
+            right_half_indexes.append(index_list[i])
 
-    return middle_four
+    # if there are no points on the left half, select the 4 points on the right half
+    if len(left_half_mid_points) == 0:
+        return right_half_indexes[:4]
+
+    # if there are no points on the right half, select the 4 points on the left half
+    if len(right_half_mid_points) == 0:
+        return left_half_indexes[-4:]
+
+    # if there is only 1 point on the left half, select the 3 points on the right half closest to the image center
+    if len(left_half_mid_points) == 1:
+        return left_half_indexes + right_half_indexes[:3]
+
+    # if there is only 1 point on the right half, select the 3 points on the left half closest to the image center
+    if len(right_half_mid_points) == 1:
+        return left_half_indexes[-3:] + right_half_indexes
+
+    # if there are points on both halves, select the 2 points on each half closest to the image center
+    # and return the indexes of those points
+    final_indexes = left_half_indexes[-2:] + right_half_indexes[:2]
+    return final_indexes
 
 
 def convert_coco_to_mask(input_json, image_folder,
@@ -62,6 +94,10 @@ def convert_coco_to_mask(input_json, image_folder,
         ann_ids = coco.getAnnIds(imgIds=img_info['id'])
         annotations = coco.loadAnns(ann_ids)
 
+        # skip image if it has not been annotated yet
+        if len(annotations) == 0:
+            continue
+
         # Draw each annotation on the mask image
         draw = ImageDraw.Draw(mask)
 
@@ -83,7 +119,7 @@ def convert_coco_to_mask(input_json, image_folder,
         mid_point_list_sorted, indexes_sorted = map(list, zip(*sorted_pairs))
 
         if len(mid_point_list_sorted) > 4:
-            selected_polygon_indexes = get_middle_four(indexes_sorted)
+            selected_polygon_indexes = get_middle_four(mid_point_list_sorted, indexes_sorted)
         else:
             selected_polygon_indexes = indexes_sorted
 
@@ -96,17 +132,15 @@ def convert_coco_to_mask(input_json, image_folder,
             draw.polygon(polygon_list[i], fill=255)
 
         # Save the selected image and mask image
-        mask_path = os.path.join(output_mask_folder, f"{img_info['file_name'].split('.')[0].split('/')[1]}_mask.png")
-        image_path = os.path.join(output_image_folder, f"{img_info['file_name'].split('.')[0].split('/')[1]}.png")
+        mask_filename = f"{img_info['file_name'].split('.')[0].split('/')[1]}_mask.png"
+        image_filename = f"{img_info['file_name'].split('.')[0].split('/')[1]}.png"
+        mask_path = os.path.join(output_mask_folder, mask_filename)
+        image_path = os.path.join(output_image_folder, image_filename)
         mask.save(mask_path)
         img.save(image_path)
 
-        # write image_file_path, mask_file_path, and lane_count to the .txt file
-        # lane count is like 0 1 0 0 = 1 lane and other 3 are not visible
-        # in our case, we count lanes from left to right and we fill accordingly
-        with open(output_txt_file_path, "a") as f:
-            sel = selected_polygon_indexes
-            f.write(f"{image_relative_path} {mask_relative_path} {sel[0]},{sel[1]},{sel[2]},{sel[3]} \n")
+        with open(output_txt_file_path, "a") as file:
+            file.write(f"{os.path.join(image_relative_path,image_filename)} {os.path.join(mask_relative_path, mask_filename)} \n")
 
 
 if __name__ == "__main__":
@@ -120,6 +154,8 @@ if __name__ == "__main__":
     output_image_relative_path = "/round_2/images-clean"
     output_mask_reltive_path = "/round_2/masks-clean"
     output_txt_file_path = "/home/sush/klab2/rosbags_collated/round_2/train_gt.txt"
+
+    # NOTE: SET IMAGE CENTER X HERE
 
     convert_coco_to_mask(coco_annotation_json, image_folder_path, output_mask_folder,
                          output_image_folder, output_txt_file_path, output_image_relative_path,
