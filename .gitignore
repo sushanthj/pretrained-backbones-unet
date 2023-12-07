@@ -12,6 +12,12 @@ wandb/*
 # Checkpoint files
 *.pth
 
+# Data
+data/*
+
+# Models
+models/*
+
 # Distribution / packaging
 .Python
 build/
