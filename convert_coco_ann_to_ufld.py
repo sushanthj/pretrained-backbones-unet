@@ -56,10 +56,11 @@ def get_middle_four(mid_point_list, index_list):
     if len(right_half_mid_points) == 1:
         return left_half_indexes[-3:] + right_half_indexes
 
-    # if there are points on both halves, select the 2 points on each half closest to the image center
-    # and return the indexes of those points
-    final_indexes = left_half_indexes[-2:] + right_half_indexes[:2]
-    return final_indexes
+    else:
+        # if there are points on both halves, select the 2 points on each half closest to the image center
+        # and return the indexes of those points
+        final_indexes = left_half_indexes[-2:] + right_half_indexes[:2]
+        return final_indexes
 
 
 def convert_coco_to_mask(input_json, image_folder,
@@ -110,7 +111,14 @@ def convert_coco_to_mask(input_json, image_folder,
 
         # the 1st and 4th index of each polygon are the two points user selects
         # in annotation tool to draw the rectangle
-        mid_point_list = [(i[1] + i[4])/2 for i in polygon_list]
+        # NOTE: i[2] = x1, i[8] = x2
+        # mid_point_list = [(i[2] + i[8])/2 for i in polygon_list]
+        mid_point_list = []
+        for i in polygon_list:
+            if i[3] > i[9]:
+                mid_point_list.append(i[2])
+            else:
+                mid_point_list.append(i[8])
         indexes = [i for i in range(len(mid_point_list))]
         # sort the mid_point_list in ascending order and accordingly sort the indexes list
 
@@ -125,7 +133,9 @@ def convert_coco_to_mask(input_json, image_folder,
 
         # pad the selected_polygon_indexes with 0s if len < 4
         if len(selected_polygon_indexes) < 4:
-            selected_polygon_indexes = selected_polygon_indexes + ((4 - len(selected_polygon_indexes)) * [0])
+            # selected_polygon_indexes = selected_polygon_indexes + ((4 - len(selected_polygon_indexes)) * [0])
+            #! SKIPPING IMAGES IF LESS THAN 4 LANES FOR NOW
+            continue
 
         for i in selected_polygon_indexes:
             # Draw polygon on the mask
@@ -140,7 +150,7 @@ def convert_coco_to_mask(input_json, image_folder,
         img.save(image_path)
 
         with open(output_txt_file_path, "a") as file:
-            file.write(f"{os.path.join(image_relative_path,image_filename)} {os.path.join(mask_relative_path, mask_filename)} \n")
+            file.write(f"{os.path.join(image_relative_path,image_filename)} {os.path.join(mask_relative_path, mask_filename)} {1} {1} {1} {1} \n")
 
 
 if __name__ == "__main__":
