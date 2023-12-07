@@ -139,7 +139,7 @@ def convert_coco_to_mask(input_json, image_folder,
 
         for i in selected_polygon_indexes:
             # Draw polygon on the mask
-            draw.polygon(polygon_list[i], fill=255)
+            draw.polygon(polygon_list[i], fill=1) # fill must be one if not torch.NLL gives errors
 
         # Save the selected image and mask image
         mask_filename = f"{img_info['file_name'].split('.')[0].split('/')[1]}_mask.png"
