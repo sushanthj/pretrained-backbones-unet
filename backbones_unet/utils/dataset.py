@@ -91,6 +91,7 @@ class SemanticSegmentationDataset(Dataset):
         # Manually cropping only the left part of the image and the top of the image
         # img.shape = CHW
         img = numpy_img[:, 8:, 240:-120]
+        img = Image.fromarray(img.transpose((1, 2, 0))) # reshaped to HWC
         ##############################################################
 
         # apply transformations on images
