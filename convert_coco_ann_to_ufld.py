@@ -149,21 +149,30 @@ def convert_coco_to_mask(input_json, image_folder,
         mask.save(mask_path)
         img.save(image_path)
 
+        # Resize images to match CULane shapes
+        img = cv2.imread(mask_path)
+        img = cv2.resize(img, (1640, 590))
+        cv2.imwrite(mask_path, img)
+
+        img = cv2.imread(image_path)
+        img = cv2.resize(img, (1640, 590))
+        cv2.imwrite(image_path, img)
+
         with open(output_txt_file_path, "a") as file:
             file.write(f"{os.path.join(image_relative_path,image_filename)} {os.path.join(mask_relative_path, mask_filename)} {1} {1} {1} {1} \n")
 
 
 if __name__ == "__main__":
     # Specify the path to COCO annotations and image folder
-    coco_annotation_json = "/home/sush/klab2/rosbags_collated/round_2/annotations.json"
-    image_folder_path = "/home/sush/klab2/rosbags_collated/round_2/"
+    coco_annotation_json = "/home/sush/klab2/rosbags_collated/round_2_test/annotations.json"
+    image_folder_path = "/home/sush/klab2/rosbags_collated/round_2_test/"
 
     # Specify the output folder for mask images
-    output_mask_folder = "/home/sush/klab2/rosbags_collated/round_2/masks-clean"
-    output_image_folder = "/home/sush/klab2/rosbags_collated/round_2/images-clean"
-    output_image_relative_path = "/round_2/images-clean"
-    output_mask_reltive_path = "/round_2/masks-clean"
-    output_txt_file_path = "/home/sush/klab2/rosbags_collated/round_2/train_gt.txt"
+    output_mask_folder = "/home/sush/klab2/rosbags_collated/round_2_test/masks-clean"
+    output_image_folder = "/home/sush/klab2/rosbags_collated/round_2_test/images-clean"
+    output_image_relative_path = "/round_2_test/images-clean"
+    output_mask_reltive_path = "/round_2_test/masks-clean"
+    output_txt_file_path = "/home/sush/klab2/rosbags_collated/round_2_test/train_gt.txt"
 
     # NOTE: SET IMAGE CENTER X HERE
 
