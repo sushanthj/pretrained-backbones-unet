@@ -89,3 +89,17 @@ import backbones_unet
 
 print(backbones_unet.__available_models__)
 ```
+
+## Crop Lane Segmentation
+
+Please refer to the unet_with_res50_segmentation.ipynb for reference.
+
+### Input Image
+![Input_Image](https://github.com/jiyooonp/Crop-Lane-Detection/blob/main/sample_dataset/images/frame000000.png?raw=True)
+
+### Ground Truth Mask
+![](./sample_dataset/masks/frame000000_mask.png)
+
+### Test Outputs from Trained Model
+
+![](./sample_dataset/unet_output.jpeg)
